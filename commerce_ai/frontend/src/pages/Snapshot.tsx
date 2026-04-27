@@ -193,7 +193,7 @@ function generateInsight(b: BenchmarkGap): string {
 
 export default function Snapshot() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
-  const [selectedId, setSelectedId] = useState<string>('M001')
+  const [selectedId, setSelectedId] = useState<string>('')
   const [data, setData] = useState<SnapshotData | null>(null)
   const [demandMap, setDemandMap] = useState<DemandCity[]>([])
   const [loading, setLoading] = useState(true)
@@ -209,14 +209,14 @@ export default function Snapshot() {
         const list = d as Merchant[]
         setMerchants(list)
         if (list.length > 0) {
-          const hasM001 = list.some((m) => m.merchant_id === 'M001')
-          if (!hasM001) setSelectedId(list[0].merchant_id)
+          setSelectedId(list[0].merchant_id)
         }
       })
       .catch(() => {})
   }, [])
 
   const load = (id: string) => {
+    if (!id) return
     setLoading(true)
     setError(null)
     setData(null)
@@ -230,7 +230,7 @@ export default function Snapshot() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load(selectedId) }, [selectedId])
+  useEffect(() => { if (selectedId) load(selectedId) }, [selectedId])
 
   const categories = useMemo(
     () => [...new Set((data?.benchmark_gaps ?? []).map((b) => b.category))].sort(),
