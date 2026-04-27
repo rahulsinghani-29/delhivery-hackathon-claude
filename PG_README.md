@@ -133,12 +133,55 @@ VITE v5.x.x  ready in XXX ms
 Open http://localhost:5173 in your browser.
 
 Pages:
-- `/snapshot` — Merchant dashboard with category distribution, demand heatmap, peer benchmark insights
+- `/snapshot` — Merchant dashboard with category distribution, demand heatmap, peer benchmark insights. Filters for category, price band, and payment mode drive all widgets (metrics, pie chart, map, benchmark list).
 - `/advisor` — Demand mix optimization suggestions
 - `/orders` — Live order feed with risk tags and next-best-action recommendations
 - `/actions` — Intervention history and execution console
 
 The default merchant is ZIBBRI B2C (M-8A25EB3E) with ~65k orders.
+
+---
+
+## API Endpoints
+
+### Merchant Operations
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/merchants` | List all merchants with order counts (top 200) |
+| `GET` | `/merchants/{id}/snapshot` | Dashboard data: distributions, warehouse nodes, benchmark gaps |
+| `GET` | `/merchants/{id}/demand-suggestions` | Demand Mix Advisor suggestions |
+| `GET` | `/merchants/{id}/orders/live` | Live order feed with risk tags and NBA |
+| `GET` | `/merchants/{id}/dashboard` | Metrics and trends |
+| `GET` | `/merchants/{id}/permissions` | Permission configuration |
+| `PUT` | `/merchants/{id}/permissions` | Update permissions |
+
+### Demand Map (supports filtering)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/merchants/{id}/demand-map` | Full demand heatmap (cached via materialized view) |
+| `GET` | `/merchants/{id}/demand-map?category=fashion` | Filtered by category |
+| `GET` | `/merchants/{id}/demand-map?payment_mode=COD` | Filtered by payment mode |
+| `GET` | `/merchants/{id}/demand-map?category=general&price_band=mid&payment_mode=COD` | Combined filters |
+
+Query params are all optional. When any filter is present, the endpoint queries the orders table directly instead of the materialized view.
+
+### Order Actions
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/merchants/{id}/actions/execute` | Execute an intervention on an order |
+| `GET` | `/merchants/{id}/actions/log` | Intervention history |
+
+### Communications
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/merchants/{id}/communications/status` | Communication logs for a merchant |
+| `GET` | `/orders/{id}/communications` | Communication logs for an order |
+| `POST` | `/merchants/{mid}/orders/{oid}/communications/trigger` | Trigger outbound communication |
+
+### System
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
 
 
 ---
@@ -187,6 +230,42 @@ When `DATABASE_URL` is not set:
 | `interventions` | 0 (runtime) | Logged actions taken on orders |
 | `communication_logs` | 0 (runtime) | WhatsApp/voice communication logs |
 | `merchant_permissions` | 2,873 | Per-merchant intervention caps and thresholds |
+| `cities` | — | City normalization lookup (canonical names) |
+| `categories` | — | Category dimension (inferred from item names) |
+
+### Orders Table Schema
+
+This is the core fact table. All cohort-based queries and the demand map filter against it.
+
+```
+orders
+├── order_id            TEXT PRIMARY KEY    -- ORD-{sha256[:12]}
+├── merchant_id         TEXT NOT NULL       -- FK → merchants
+├── buyer_id            TEXT                -- customer identifier
+├── buyer_rto_history   REAL               -- 0-1 historical RTO rate
+├── category            TEXT                -- inferred: fashion, beauty, health, food, electronics, home, jewellery, footwear, general
+├── price_band          TEXT NOT NULL       -- low (<300), mid (300-999), high (1000-2999), premium (3000+)
+├── payment_mode        TEXT NOT NULL       -- COD or Prepaid
+├── origin_city         TEXT                -- normalized city name
+├── origin_state        TEXT                -- state name
+├── destination_city    TEXT                -- normalized city name (Title Case)
+├── destination_pincode TEXT                -- 6-digit pincode
+├── address_quality     REAL               -- 0-1, derived from adfix correction + buyer RTO history
+├── was_adfix_corrected BOOLEAN            -- address was auto-corrected
+├── manifest_latency    INTEGER            -- days between order and manifest
+├── order_amount        NUMERIC(12,2)      -- capped at 50,000
+├── delivery_outcome    TEXT NOT NULL       -- delivered, rto, in_transit, cancelled, pending
+├── rto_score           REAL DEFAULT 0.5   -- ML-predicted risk (filled by scorer at runtime)
+├── shipping_mode       TEXT DEFAULT 'standard'
+└── created_at          TIMESTAMPTZ
+```
+
+**Key indexes:**
+- `(merchant_id)` — merchant lookups
+- `(merchant_id, category, price_band, payment_mode)` — cohort queries
+- `(merchant_id, destination_city)` — demand map
+- `(delivery_outcome)` — RTO aggregations
+- `(rto_score) WHERE rto_score > 0.4` — partial index for risky orders
 
 ### Materialized Views
 
@@ -287,12 +366,15 @@ cd commerce_ai/frontend && npm run dev
 | File | What it does |
 |------|-------------|
 | `data/db.py` | Database abstraction layer. `is_postgres()` checks `DATABASE_URL`. `PgConnectionWrapper` converts `?` → `%s` placeholders. |
-| `data/queries.py` | All SQL queries. Uses `is_postgres()` to branch between materialized views (Postgres) and sampling (SQLite). |
+| `data/queries.py` | All SQL queries. Uses `is_postgres()` to branch between materialized views (Postgres) and sampling (SQLite). Includes `get_demand_map_filtered()` for cohort-filtered city stats. |
 | `api/app.py` | FastAPI app. Lifespan handler creates all services with dependency injection. |
+| `api/routes.py` | All REST endpoints. `GET /merchants/{id}/demand-map` accepts optional `?category=&price_band=&payment_mode=` query params. |
 | `postgres_schema.sql` | Postgres schema (tables + indexes, no materialized views — those are created by the ETL). |
 | `scripts/load_postgres.py` | ETL pipeline. 3-pass CSV processing with city normalization, category inference, amount capping. |
 | `scripts/validate_postgres.py` | 31-check validation suite. Run after any data load. |
 | `docker-compose.etl.yml` | Postgres 16 + ETL container definition. |
+| `frontend/src/pages/Snapshot.tsx` | Main dashboard page. Filters drive metrics, pie chart, demand map, and benchmark list. |
+| `frontend/src/lib/api.ts` | Frontend API client. `fetchDemandMap()` accepts optional filter params. |
 
 ### Column Name Differences
 

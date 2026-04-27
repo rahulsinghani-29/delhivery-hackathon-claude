@@ -380,8 +380,21 @@ def list_merchants(db=Depends(_get_db)):
 
 
 @router.get("/merchants/{merchant_id}/demand-map")
-def get_demand_map(merchant_id: str, db=Depends(_get_db)):
-    """Destination-city order volume + RTO rate — used for the India demand heatmap."""
+def get_demand_map(
+    merchant_id: str,
+    category: Optional[str] = None,
+    price_band: Optional[str] = None,
+    payment_mode: Optional[str] = None,
+    db=Depends(_get_db),
+):
+    """Destination-city order volume + RTO rate — used for the India demand heatmap.
+
+    Optional query params filter by cohort dimensions (category, price_band, payment_mode).
+    When no filters are provided, returns the cached full demand map.
+    """
     _validate_merchant(db, merchant_id)
+    if category or price_band or payment_mode:
+        from data.queries import get_demand_map_filtered
+        return get_demand_map_filtered(db, merchant_id, category, price_band, payment_mode)
     from data.queries import get_demand_map as _demand_map
     return _demand_map(db, merchant_id)

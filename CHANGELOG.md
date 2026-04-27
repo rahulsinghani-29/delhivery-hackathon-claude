@@ -1,5 +1,44 @@
 # Changelog — `pg-etl` branch
 
+## 2026-04-27 — Interactive Filtered Dashboard
+
+### Summary
+
+Made the Snapshot page fully interactive — filters for category, price band, and payment mode
+now drive the demand heatmap, metric cards, and category pie chart in addition to the
+benchmark list. Added a new filtered demand-map backend endpoint. Fixed several frontend
+rendering issues.
+
+### Changes
+
+| File | What Changed |
+|------|-------------|
+| `commerce_ai/data/queries.py` | Added `get_demand_map_filtered()` — queries the orders table with optional category/price_band/payment_mode WHERE clauses, returns city-level stats matching the filter. |
+| `commerce_ai/api/routes.py` | Extended `GET /merchants/{id}/demand-map` with optional query params `?category=&price_band=&payment_mode=`. When any filter is present, calls the new filtered query instead of the cached materialized view. |
+| `commerce_ai/frontend/src/lib/api.ts` | `fetchDemandMap()` now accepts an optional filters object and appends query params. |
+| `commerce_ai/frontend/src/pages/Snapshot.tsx` | Major rework of the Snapshot page: |
+| | — Filters moved above metrics/charts so they visually control the whole page |
+| | — Demand heatmap re-fetches from backend when any filter changes |
+| | — Category pie chart recomputes from filtered benchmark gaps |
+| | — Metric cards now show 4 values: Destination Cities, Filtered/Total Orders, Avg RTO Rate, Cohorts Shown |
+| | — Labels update to indicate filtered state ("Filtered Orders", "Filtered Avg RTO") |
+| | — Fixed default merchant ID (`M001` → empty, waits for merchant list) |
+| | — Fixed `loading` state stuck on `true` when no merchant selected |
+| | — Fixed city coordinate lookup (lowercases input to match the lookup table) |
+| | — Downgraded `react-leaflet` from v5 to v4.2.1 (v5 requires React 19, project uses React 18) |
+
+### New API Behavior
+
+```
+GET /merchants/{id}/demand-map                          → full cached demand map (unchanged)
+GET /merchants/{id}/demand-map?payment_mode=COD         → COD orders only (1,002 cities for ZIBBRI)
+GET /merchants/{id}/demand-map?category=general         → general category only (2,324 cities)
+GET /merchants/{id}/demand-map?category=health&payment_mode=Prepaid → combined filter
+```
+
+---
+
+
 ## 2026-04-27 — Postgres Migration & ETL Pipeline
 
 ### Summary
@@ -25,78 +64,23 @@ dual-backend (Postgres or SQLite) via a single `DATABASE_URL` environment variab
 | File | What Changed |
 |------|-------------|
 | `commerce_ai/data/db.py` | Rewrote to support both SQLite and Postgres. Added `PgConnectionWrapper` (converts `?` → `%s`, returns dict rows, auto-rollback on errors). Added `is_postgres()` function. |
-| `commerce_ai/data/queries.py` | Removed all `sqlite3` type hints. Added Postgres-specific query paths using materialized views for `get_merchant_snapshot`, `get_cohort_benchmarks`, `get_peer_benchmarks`, `get_all_merchants`, `get_demand_map`. Fixed column name differences (`destination_cluster` → `destination_city`, `origin_node` → `origin_state`, `customer_ucid` → `buyer_id`). |
-| `commerce_ai/api/app.py` | Updated lifespan to detect Postgres via `DATABASE_URL`, skip sample data loading in Postgres mode, log which backend is active. |
-| `commerce_ai/ai/knowledge_graph.py` | Removed `sqlite3` import. Column names now adapt to backend (`origin_state`/`destination_city` for Postgres, `origin_node`/`destination_cluster` for SQLite). Replaced `ORDER BY ROWID` with plain `LIMIT` for Postgres. |
-| `commerce_ai/services/action_executor.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/services/auto_cancel.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/services/demand_advisor.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/services/guardrails.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/services/impulse_detector.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/services/order_engine.py` | Removed `sqlite3` import and type hint. |
-| `commerce_ai/.env` | Added `DATABASE_URL` documentation. |
-| `commerce_ai/.env.example` | Added `DATABASE_URL` documentation. |
-
----
+| `commerce_ai/data/queries.py` | Removed all `sqlite3` type hints. Added Postgres-specific query paths using materialized views. Fixed column name differences (`destination_cluster` → `destination_city`, `origin_node` → `origin_state`, `customer_ucid` → `buyer_id`). |
+| `commerce_ai/api/app.py` | Updated lifespan to detect Postgres via `DATABASE_URL`, skip sample data loading in Postgres mode. |
+| `commerce_ai/ai/knowledge_graph.py` | Removed `sqlite3` import. Column names adapt to backend. Replaced `ORDER BY ROWID` with plain `LIMIT` for Postgres. |
+| `commerce_ai/services/*.py` (6 files) | Removed `sqlite3` imports and type hints from action_executor, auto_cancel, demand_advisor, guardrails, impulse_detector, order_engine. |
+| `commerce_ai/.env` / `.env.example` | Added `DATABASE_URL` documentation. |
 
 ### ETL Pipeline Details
 
 **Input:** `rto-data-hackathon-result-1-2026-04-27-13-59-08.csv` (222 MB, 1.9M rows)
 
-**Data profile discovered:**
-- 474,408 order-level rows (have buyer, origin, destination, final_status)
-- 1,429,938 line-item rows (product names + amounts only, no buyer/status)
-- 2,873 unique merchants, 233k unique buyers
-- Payment split: 50.7% COD / 49.3% Prepaid
-- RTO rate: 17.7% overall — COD 34.8% vs Prepaid 1.2%
-- `category_name` 97% empty — inferred from `line_item_name` via keyword matching
-- `destination_city` had duplicates (Bangalore/BANGALORE/Bengaluru) — normalized
+**Data profile:**
+- 474,408 order rows + 1,429,938 line-item rows
+- 2,873 merchants, 233k buyers
+- RTO: 17.7% overall — COD 34.8% vs Prepaid 1.2%
 
-**Transforms applied:**
-- City normalization (11 city alias groups)
-- Category inference from line_item_name (8 categories: fashion, beauty, jewellery, food, electronics, health, home, footwear)
-- Payment mode from `hudi_pt_tag` (cleaner than `payment_method`)
-- Price band derivation from `order_amt` (low/mid/high/premium)
-- Address quality from `was_adfix_corrected` + `buyer_rto_history_pct`
-- Order amount capped at 50,000 (P99.5 outlier removal)
-- Synthetic order IDs generated (CSV has no waybill/order_id column)
+**Transforms:** city normalization (11 groups), category inference (8 categories from item names), payment mode cleanup, price band derivation, amount capping at 50k, synthetic order IDs.
 
-**Materialized views created:**
-| View | Rows | Purpose |
-|------|------|---------|
-| `mv_merchant_cohort_stats` | 115,455 | Per-merchant cohort performance (replaces SQLite ROWID sampling) |
-| `mv_peer_benchmarks` | 7,345 | Network-wide peer comparison for Demand Mix Advisor |
-| `mv_merchant_summary` | 2,873 | Merchant list with aggregated stats |
-| `mv_demand_map` | 63,792 | Destination heatmap data |
+**Materialized views:** `mv_merchant_cohort_stats` (115k rows), `mv_peer_benchmarks` (7.3k), `mv_merchant_summary` (2.9k), `mv_demand_map` (64k).
 
-**Validation results:** 31/31 checks passed, 0 failures, 0 warnings.
-
-**Total ETL time:** 53 seconds (containerized).
-
----
-
-### How to Use
-
-**Postgres mode (new):**
-```bash
-# Start Postgres with data (first time)
-cd commerce_ai
-podman-compose -f docker-compose.etl.yml up
-
-# Run the app against Postgres
-export DATABASE_URL="postgresql://commerce:commerce@localhost:5432/commerce_ai"
-python -m uvicorn api.app:app --host 0.0.0.0 --port 8000
-```
-
-**SQLite mode (unchanged):**
-```bash
-cd commerce_ai
-python -m uvicorn api.app:app --host 0.0.0.0 --port 8000
-```
-
-**Frontend:**
-```bash
-cd commerce_ai/frontend
-npm run dev
-# Opens at http://localhost:5173
-```
+**Validation:** 31/31 checks passed. Total ETL time: 53 seconds.

@@ -255,6 +255,39 @@ export default function Snapshot() {
     })
   }, [data, filterCategory, filterPriceBand, filterPayment])
 
+  const hasActiveFilter = !!(filterCategory || filterPriceBand || filterPayment)
+
+  // Re-fetch demand map when filters change
+  useEffect(() => {
+    if (!selectedId) return
+    const filters = {
+      category: filterCategory || undefined,
+      price_band: filterPriceBand || undefined,
+      payment_mode: filterPayment || undefined,
+    }
+    fetchDemandMap(selectedId, filters)
+      .then((map) => setDemandMap(map as DemandCity[]))
+      .catch(() => {})
+  }, [selectedId, filterCategory, filterPriceBand, filterPayment])
+
+  // Filtered metrics derived from benchmark gaps
+  const filteredOrderCount = useMemo(
+    () => filteredGaps.reduce((s, b) => s + b.order_count, 0),
+    [filteredGaps],
+  )
+
+  // Aggregate filtered gaps by category for the pie chart
+  const categoryData = useMemo(() => {
+    if (hasActiveFilter) {
+      const byCategory: Record<string, number> = {}
+      for (const b of filteredGaps) {
+        byCategory[b.category] = (byCategory[b.category] ?? 0) + b.order_count
+      }
+      return Object.entries(byCategory).map(([name, value]) => ({ name, value }))
+    }
+    return Object.entries(data?.category_distribution ?? {}).map(([name, value]) => ({ name, value }))
+  }, [data, filteredGaps, hasActiveFilter])
+
   const mapCities = useMemo(() => {
     const maxOrders = Math.max(...demandMap.map((c) => c.order_count), 1)
     return demandMap
@@ -263,14 +296,11 @@ export default function Snapshot() {
       .map((c) => ({ ...c, radius: 6 + 22 * (c.order_count / maxOrders) }))
   }, [demandMap])
 
-  const categoryData = useMemo(
-    () => Object.entries(data?.category_distribution ?? {}).map(([name, value]) => ({ name, value })),
-    [data],
-  )
-
   const totalOrders = useMemo(
-    () => Object.values(data?.category_distribution ?? {}).reduce((s, v) => s + v, 0),
-    [data],
+    () => hasActiveFilter
+      ? filteredOrderCount
+      : Object.values(data?.category_distribution ?? {}).reduce((s, v) => s + v, 0),
+    [data, hasActiveFilter, filteredOrderCount],
   )
 
   const selectedMerchant = merchants.find((m) => m.merchant_id === selectedId)
@@ -309,10 +339,56 @@ export default function Snapshot() {
         </div>
       </div>
 
+      {/* Filters — control metrics, charts, map, and benchmark list */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filter by</span>
+        <select
+          className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
+          value={filterPriceBand}
+          onChange={(e) => setFilterPriceBand(e.target.value)}
+        >
+          <option value="">All Price Bands</option>
+          {priceBands.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select
+          className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
+          value={filterPayment}
+          onChange={(e) => setFilterPayment(e.target.value)}
+        >
+          <option value="">All Payment Modes</option>
+          {paymentModes.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        {hasActiveFilter && (
+          <button
+            className="text-xs text-gray-400 underline"
+            onClick={() => { setFilterCategory(''); setFilterPriceBand(''); setFilterPayment('') }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-4 gap-4">
         <MetricCard label="Destination Cities" value={demandMap.length.toLocaleString()} />
-        <MetricCard label="Total Orders" value={totalOrders.toLocaleString()} />
+        <MetricCard label={hasActiveFilter ? 'Filtered Orders' : 'Total Orders'} value={totalOrders.toLocaleString()} />
+        <MetricCard
+          label={hasActiveFilter ? 'Filtered Avg RTO' : 'Avg RTO Rate'}
+          value={
+            filteredGaps.length > 0
+              ? `${(filteredGaps.reduce((s, b) => s + b.merchant_rto_rate * b.order_count, 0) / Math.max(filteredOrderCount, 1)).toFixed(1)}%`
+              : '—'
+          }
+        />
+        <MetricCard label="Cohorts Shown" value={`${filteredGaps.length} / ${(data?.benchmark_gaps ?? []).length}`} />
       </div>
 
       {/* Charts row */}
@@ -320,7 +396,9 @@ export default function Snapshot() {
 
         {/* Category pie */}
         <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Category Distribution</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">
+            Category Distribution{hasActiveFilter ? ' (filtered)' : ''}
+          </p>
           {categoryData.length === 0 ? (
             <p className="text-sm text-gray-400 py-8 text-center">No data</p>
           ) : (
@@ -408,41 +486,7 @@ export default function Snapshot() {
           </span>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <select
-            className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select
-            className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
-            value={filterPriceBand}
-            onChange={(e) => setFilterPriceBand(e.target.value)}
-          >
-            <option value="">All Price Bands</option>
-            {priceBands.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select
-            className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none"
-            value={filterPayment}
-            onChange={(e) => setFilterPayment(e.target.value)}
-          >
-            <option value="">All Payment Modes</option>
-            {paymentModes.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-          {(filterCategory || filterPriceBand || filterPayment) && (
-            <button
-              className="text-xs text-gray-400 underline"
-              onClick={() => { setFilterCategory(''); setFilterPriceBand(''); setFilterPayment('') }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        {/* Filters moved to top of page */}
 
         {filteredGaps.length === 0 ? (
           <p className="text-sm text-gray-500 py-4">No benchmark data for selected filters.</p>

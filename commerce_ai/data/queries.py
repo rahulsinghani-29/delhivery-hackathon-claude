@@ -604,3 +604,43 @@ def get_demand_map(db, merchant_id: str) -> list[dict]:
         )
     _cache_set(cache_key, rows, ttl=120)
     return rows
+
+
+def get_demand_map_filtered(
+    db, merchant_id: str,
+    category: str | None = None,
+    price_band: str | None = None,
+    payment_mode: str | None = None,
+) -> list[dict]:
+    """Demand map filtered by cohort dimensions. Queries orders table directly."""
+    dest_col = "destination_city" if is_postgres() else "destination_cluster"
+
+    conditions = [f"merchant_id = ?", f"delivery_outcome IN ('delivered', 'rto')"]
+    params: list = [merchant_id]
+
+    if category:
+        conditions.append("category = ?")
+        params.append(category)
+    if price_band:
+        conditions.append("price_band = ?")
+        params.append(price_band)
+    if payment_mode:
+        conditions.append("payment_mode = ?")
+        params.append(payment_mode)
+
+    where = " AND ".join(conditions)
+
+    return _rows_to_dicts(
+        db.execute(
+            f"""
+            SELECT {dest_col} AS city, COUNT(*) AS order_count,
+                SUM(CASE WHEN delivery_outcome = 'rto' THEN 1 ELSE 0 END) AS rto_count,
+                ROUND(100.0 * AVG(CASE WHEN delivery_outcome = 'rto' THEN 1.0 ELSE 0.0 END){'::numeric' if is_postgres() else ''}, 1) AS rto_rate
+            FROM orders
+            WHERE {where}
+            GROUP BY {dest_col}
+            ORDER BY order_count DESC
+            """,
+            tuple(params),
+        )
+    )

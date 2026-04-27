@@ -22,8 +22,16 @@ export async function fetchSnapshot(merchantId: string) {
   return request(`/merchants/${merchantId}/snapshot`)
 }
 
-export async function fetchDemandMap(merchantId: string) {
-  return request(`/merchants/${merchantId}/demand-map`)
+export async function fetchDemandMap(
+  merchantId: string,
+  filters?: { category?: string; price_band?: string; payment_mode?: string },
+) {
+  const params = new URLSearchParams()
+  if (filters?.category) params.set('category', filters.category)
+  if (filters?.price_band) params.set('price_band', filters.price_band)
+  if (filters?.payment_mode) params.set('payment_mode', filters.payment_mode)
+  const qs = params.toString()
+  return request(`/merchants/${merchantId}/demand-map${qs ? `?${qs}` : ''}`)
 }
 
 export async function fetchDemandSuggestions(merchantId: string) {
