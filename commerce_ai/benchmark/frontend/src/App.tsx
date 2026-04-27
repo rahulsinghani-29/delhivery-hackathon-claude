@@ -1,17 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { MapContainer, TileLayer, CircleMarker, Tooltip as MapTooltip } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import {
-  fetchClients, fetchBenchmark,
-  type ClientSummary, type BenchmarkResult,
+  fetchClients, fetchBenchmark, fetchDemandMap,
+  type ClientSummary, type BenchmarkResult, type DemandCity,
 } from './lib/api'
 
 export default function App() {
   const [clients, setClients] = useState<ClientSummary[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [result, setResult] = useState<BenchmarkResult | null>(null)
+  const [demandMap, setDemandMap] = useState<DemandCity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -26,9 +29,14 @@ export default function App() {
     setLoading(true)
     setError('')
     setResult(null)
+    setDemandMap([])
     try {
-      const data = await fetchBenchmark(selectedId)
+      const [data, map] = await Promise.all([
+        fetchBenchmark(selectedId),
+        fetchDemandMap(selectedId),
+      ])
       setResult(data)
+      setDemandMap(map)
     } catch {
       setError('Failed to load benchmark data')
     } finally {
@@ -58,9 +66,13 @@ export default function App() {
               className="w-full h-9 px-3 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:border-delhivery-red"
             >
               <option value="">— Choose a client —</option>
-              {clients.map((c) => (
+              {[...clients].sort((a, b) => {
+                if (a.category === 'Others' && b.category !== 'Others') return 1
+                if (a.category !== 'Others' && b.category === 'Others') return -1
+                return a.name.localeCompare(b.name)
+              }).map((c) => (
                 <option key={c.client_id} value={c.client_id}>
-                  {c.name} ({c.category}, {c.rto_rate.toFixed(1)}% COD RTO, {c.order_count} orders)
+                  {c.name} ({c.category})
                 </option>
               ))}
             </select>
@@ -80,7 +92,7 @@ export default function App() {
           </div>
         )}
 
-        {result && <BenchmarkResults data={result} />}
+        {result && <BenchmarkResults data={result} demandMap={demandMap} />}
       </main>
     </div>
   )
@@ -91,14 +103,156 @@ function rto1(v: number | undefined): string {
 }
 
 
+// ── City Coords ──
+const CITY_COORDS: Record<string, [number, number]> = {
+  mumbai: [19.076, 72.877],
+  delhi: [28.614, 77.209],
+  new_delhi: [28.614, 77.209],
+  bangalore: [12.972, 77.594],
+  bengaluru: [12.972, 77.594],
+  hyderabad: [17.385, 78.487],
+  chennai: [13.083, 80.271],
+  kolkata: [22.573, 88.364],
+  pune: [18.520, 73.857],
+  ahmedabad: [23.023, 72.571],
+  jaipur: [26.913, 75.787],
+  surat: [21.170, 72.831],
+  lucknow: [26.847, 80.946],
+  kanpur: [26.449, 80.332],
+  nagpur: [21.145, 79.088],
+  indore: [22.719, 75.857],
+  bhopal: [23.259, 77.413],
+  visakhapatnam: [17.687, 83.218],
+  agra: [27.177, 78.008],
+  vadodara: [22.307, 73.181],
+  ludhiana: [30.901, 75.857],
+  patna: [25.594, 85.137],
+  nashik: [20.006, 73.790],
+  faridabad: [28.408, 77.318],
+  meerut: [28.985, 77.706],
+  rajkot: [22.304, 70.802],
+  varanasi: [25.318, 82.974],
+  coimbatore: [11.017, 76.956],
+  kochi: [9.931, 76.267],
+  guwahati: [26.145, 91.736],
+  chandigarh: [30.733, 76.779],
+  bhubaneswar: [20.296, 85.825],
+  dehradun: [30.316, 78.032],
+  amritsar: [31.634, 74.872],
+  prayagraj: [25.436, 81.846],
+  allahabad: [25.436, 81.846],
+  jabalpur: [23.181, 79.986],
+  gwalior: [26.218, 78.183],
+  ranchi: [23.344, 85.310],
+  raipur: [21.251, 81.630],
+  jodhpur: [26.239, 73.024],
+  madurai: [9.925, 78.120],
+  thiruvananthapuram: [8.524, 76.937],
+  trivandrum: [8.524, 76.937],
+  vijayawada: [16.506, 80.648],
+  thane: [19.218, 72.978],
+  navi_mumbai: [19.033, 73.030],
+  gurugram: [28.459, 77.027],
+  gurgaon: [28.459, 77.027],
+  noida: [28.535, 77.391],
+  ghaziabad: [28.669, 77.454],
+  mysore: [12.296, 76.639],
+  mysuru: [12.296, 76.639],
+  hubli: [15.365, 75.124],
+  belgaum: [15.850, 74.498],
+  belagavi: [15.850, 74.498],
+  mangalore: [12.914, 74.856],
+  kota: [25.214, 75.865],
+  siliguri: [26.727, 88.395],
+  warangal: [17.978, 79.594],
+  guntur: [16.301, 80.443],
+  salem: [11.664, 78.146],
+  tiruppur: [11.109, 77.341],
+  bhilai: [21.217, 81.433],
+  bhiwandi: [19.296, 73.063],
+  tiruchirappalli: [10.791, 78.705],
+}
+
+function getCityCoords(slug: string): [number, number] | null {
+  const lower = slug.toLowerCase().replace(/\s+/g, '_')
+  if (CITY_COORDS[lower]) return CITY_COORDS[lower]
+  const noUnderscore = lower.replace(/_/g, '')
+  for (const [k, v] of Object.entries(CITY_COORDS)) {
+    if (k.replace(/_/g, '') === noUnderscore) return v
+  }
+  return null
+}
+
+
 // ── Results ──
-function BenchmarkResults({ data }: { data: BenchmarkResult }) {
+function BenchmarkResults({ data, demandMap }: { data: BenchmarkResult; demandMap: DemandCity[] }) {
   const { client, peers, peer_average, overall_assessment, strengths, improvement_areas, peer_learnings } = data
+
+  const mapCities = useMemo(() => {
+    const maxOrders = Math.max(...demandMap.map((c) => c.order_count), 1)
+    return demandMap
+      .map((c) => {
+        const rto = Math.min(c.rto_rate, 100)
+        return { ...c, rto_rate: rto, coords: getCityCoords(c.city) }
+      })
+      .filter((c) => c.coords !== null)
+      .map((c) => ({ ...c, radius: Math.min(20, Math.max(4, 4 + 16 * (c.order_count / maxOrders))) }))
+  }, [demandMap])
 
   return (
     <div className="space-y-6">
       {/* Client card */}
       <ClientCard client={client} peerAvgRto={peer_average.rto_rate} />
+
+      {/* India Demand Heatmap */}
+      {mapCities.length > 0 && (
+        <section className="bg-white border border-gray-300 rounded-lg p-5">
+          <h2 className="text-base font-semibold mb-3">COD Demand Heatmap — India</h2>
+          <div style={{ height: 350, borderRadius: 6, overflow: 'hidden' }}>
+            <MapContainer
+              center={[22.5, 82.5]}
+              zoom={4}
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+              scrollWheelZoom={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              />
+              {mapCities.map((c) => (
+                <CircleMarker
+                  key={c.city}
+                  center={c.coords as [number, number]}
+                  radius={c.radius}
+                  pathOptions={{
+                    fillColor: c.rto_rate > 30 ? '#EE3C26' : c.rto_rate > 15 ? '#F59E0B' : '#2563EB',
+                    fillOpacity: 0.72,
+                    color: 'white',
+                    weight: 1,
+                  }}
+                >
+                  <MapTooltip>
+                    <strong>{c.city.replace(/_/g, ' ')}</strong><br />
+                    {c.order_count.toLocaleString()} orders · {c.rto_rate}% COD RTO
+                  </MapTooltip>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
+          <div className="flex gap-4 mt-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-600" /> &lt;15% RTO
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" /> 15–30%
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600" /> &gt;30%
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* Overall Assessment */}
       <section className="bg-white border border-gray-300 rounded-lg p-5">
@@ -215,6 +369,9 @@ function ClientCard({ client, peerAvgRto }: { client: BenchmarkResult['client'];
             )}
             <span className="text-xs text-gray-500">
               {client.order_count.toLocaleString()} orders
+            </span>
+            <span className="text-xs text-gray-400">
+              (Jan–Jun 2025)
             </span>
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
@@ -333,8 +490,8 @@ function ComparisonBarChart({ client, peerAvg }: { client: BenchmarkResult['clie
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip contentStyle={{ fontSize: 12 }} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="client" name="Client" fill="#EE3C26" radius={[2, 2, 0, 0]} />
-          <Bar dataKey="peers" name="Peer Avg" fill="#2563EB" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="client" name="Client" fill="#F5D06E" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="peers" name="Peer Avg" fill="#93C5FD" radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </section>
@@ -365,8 +522,8 @@ function CityRtoSection({ client, peerAvg }: { client: BenchmarkResult['client']
           <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={120} />
           <Tooltip contentStyle={{ fontSize: 12 }} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="client" name="Client" fill="#EE3C26" radius={[0, 2, 2, 0]} />
-          <Bar dataKey="peers" name="Peer Avg" fill="#2563EB" radius={[0, 2, 2, 0]} />
+          <Bar dataKey="client" name="Client" fill="#F5D06E" radius={[0, 2, 2, 0]} />
+          <Bar dataKey="peers" name="Peer Avg" fill="#93C5FD" radius={[0, 2, 2, 0]} />
         </BarChart>
       </ResponsiveContainer>
 

@@ -18,55 +18,35 @@ from fastapi.middleware.cors import CORSMiddleware
 DB_PATH = Path(__file__).parent / "benchmark.db"
 
 # ---------------------------------------------------------------------------
-# Database — uses main data.db module if Postgres is available, else local SQLite
+# Database
 # ---------------------------------------------------------------------------
 
-_conn = None
+_conn: sqlite3.Connection | None = None
 
 
-def get_db():
+def get_db() -> sqlite3.Connection:
     global _conn
-    if _conn is not None:
-        return _conn
-    try:
-        from data.db import get_db as main_get_db, is_postgres
-        if is_postgres():
-            _conn = main_get_db(str(DB_PATH))
-            print("Benchmark: using Postgres from main db module")
-            return _conn
-    except Exception:
-        pass
-    # Fallback to local SQLite
-    import sqlite3
-    _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    _conn.row_factory = sqlite3.Row
-    _conn.execute("PRAGMA journal_mode=WAL")
+    if _conn is None:
+        _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        _conn.row_factory = sqlite3.Row
+        _conn.execute("PRAGMA journal_mode=WAL")
     return _conn
 
 
 def _check_and_generate_data() -> None:
     """Generate data if DB doesn't exist or is empty."""
-    try:
-        from data.db import is_postgres
-        if is_postgres():
-            print("Benchmark: Postgres mode — skipping local data generation")
-            return
-    except Exception:
-        pass
     if not DB_PATH.exists():
         print("benchmark.db not found — generating data...")
         from benchmark.generate_data import main as gen_main
         gen_main()
         return
     conn = get_db()
-    try:
-        count = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
-        if count == 0:
-            print("DB empty — generating data...")
-            from benchmark.generate_data import main as gen_main
-            gen_main()
-    except Exception:
-        pass
+    count = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+    if count == 0:
+        print("DB empty — generating data...")
+        conn.close()
+        from benchmark.generate_data import main as gen_main
+        gen_main()
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +125,28 @@ def list_clients():
     return df[
         ["client_id", "name", "category", "avg_price_range", "client_type", "order_count", "rto_rate"]
     ].to_dict(orient="records")
+
+
+# ---------------------------------------------------------------------------
+# GET /clients/{client_id}/demand-map
+# ---------------------------------------------------------------------------
+
+@app.get("/clients/{client_id}/demand-map")
+def get_demand_map(client_id: str):
+    """Return city-level COD order counts and RTO rates for a client."""
+    conn = get_db()
+    df = pd.read_sql_query("""
+        SELECT destination_city as city,
+            COUNT(*) as order_count,
+            SUM(CASE WHEN is_rto = 1 THEN 1 ELSE 0 END) as rto_count,
+            ROUND(100.0 * AVG(CASE WHEN is_rto = 1 THEN 1.0 ELSE 0.0 END), 1) as rto_rate
+        FROM orders
+        WHERE client_id = ? AND payment_mode = 'COD'
+            AND destination_city IS NOT NULL AND destination_city != ''
+        GROUP BY destination_city
+        ORDER BY order_count DESC
+    """, conn, params=(client_id,))
+    return df.to_dict(orient="records")
 
 
 # ---------------------------------------------------------------------------
@@ -585,19 +587,22 @@ def _diagnose(
         p_cod_pct = peer.get("cod_pct", 0)
         p_orders = peer.get("order_count", 0)
 
+        # Skip peers with 0% COD — they have no COD RTO data, comparison is meaningless
+        if p_cod_pct < 5 or p_rto == 0:
+            continue
+
         # Find what makes this peer different
         if p_rto < cm.get("rto_rate", 0):
-            if p_cod_pct < cod_pct_client - 10:
-                peer_learnings.append(
-                    f"{p_name} achieves {p_rto}% COD RTO with only {p_cod_pct}% COD "
-                    f"(vs your {cod_pct_client}%) across {p_orders} orders — "
-                    f"their lower COD share is a key differentiator."
-                )
-            elif peer.get("avg_manifest_latency", 99) < cm.get("avg_manifest_latency", 0) - 0.3:
+            if peer.get("avg_manifest_latency", 99) < cm.get("avg_manifest_latency", 0) - 0.3:
                 peer_learnings.append(
                     f"{p_name} has {p_rto}% COD RTO with manifest latency of "
                     f"{peer['avg_manifest_latency']} days (vs your {cm['avg_manifest_latency']} days) — "
                     f"faster processing correlates with lower RTO."
+                )
+            elif p_cod_pct > cod_pct_client + 10:
+                peer_learnings.append(
+                    f"{p_name} achieves {p_rto}% COD RTO despite having {p_cod_pct}% COD "
+                    f"(higher than your {cod_pct_client}%) across {p_orders} orders."
                 )
             else:
                 peer_learnings.append(
