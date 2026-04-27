@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sqlite3
+
 import uuid
 from datetime import datetime
 
@@ -13,7 +13,7 @@ from models import DELHIVERY_EXECUTABLE, MERCHANT_OWNED, InterventionType
 class ActionExecutorService:
     """Executes interventions with permission and rate limit checks."""
 
-    def __init__(self, db: sqlite3.Connection) -> None:
+    def __init__(self, db) -> None:
         self.db = db
 
     def execute(

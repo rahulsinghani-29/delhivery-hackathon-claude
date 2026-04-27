@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+
 import uuid
 from datetime import datetime
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class AutoCancelService:
     """Pure threshold check for auto-cancelling high-RTO orders."""
 
-    def __init__(self, db: sqlite3.Connection) -> None:
+    def __init__(self, db) -> None:
         self.db = db
 
     def check_and_cancel(self, order: dict, merchant_config: dict) -> dict:

@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir psycopg2-binary
+
+# Copy schema and scripts
+COPY postgres_schema.sql .
+COPY scripts/ scripts/
+
+# Default: run ETL then validation
+CMD ["sh", "-c", "python -m scripts.load_postgres --csv /data/input.csv --dsn $DATABASE_URL && python -m scripts.validate_postgres --dsn $DATABASE_URL"]

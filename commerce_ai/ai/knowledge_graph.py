@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import math
-import sqlite3
 from dataclasses import dataclass, field
 
 import networkx as nx
@@ -58,8 +57,8 @@ class RiskKnowledgeGraph:
     # Graph construction
     # ------------------------------------------------------------------
 
-    def build_graph(self, db: sqlite3.Connection) -> None:
-        """Build the knowledge graph from order data in SQLite.
+    def build_graph(self, db) -> None:
+        """Build the knowledge graph from order data.
 
         Creates nodes and edges for:
         1. Merchant → Warehouse Node (edge weight: order volume)
@@ -69,18 +68,28 @@ class RiskKnowledgeGraph:
         5. Payment Mode → Destination Cluster (edge weight: RTO rate by payment mode in that cluster)
         """
         # Sample up to 500k orders for graph build — avoids full scans on large datasets.
-        # The statistics are representative enough at this scale.
-        SAMPLE = "SELECT * FROM orders ORDER BY ROWID LIMIT 500000"
+        # Column names differ between SQLite and Postgres
+        from data.db import is_postgres
+        if is_postgres():
+            SAMPLE = "SELECT * FROM orders LIMIT 500000"
+            ORIGIN_COL = "origin_state"
+            DEST_COL = "destination_city"
+            CUSTOMER_COL = "buyer_id"
+        else:
+            SAMPLE = "SELECT * FROM orders ORDER BY ROWID LIMIT 500000"
+            ORIGIN_COL = "origin_node"
+            DEST_COL = "destination_cluster"
+            CUSTOMER_COL = "customer_ucid"
 
         # 1. Merchant → Warehouse Node
         rows = db.execute(
             f"""
             SELECT
                 o.merchant_id,
-                o.origin_node,
+                o.{ORIGIN_COL} AS origin_node,
                 COUNT(*) AS order_count
             FROM ({SAMPLE}) o
-            GROUP BY o.merchant_id, o.origin_node
+            GROUP BY o.merchant_id, o.{ORIGIN_COL}
             """
         ).fetchall()
         for r in rows:
@@ -94,14 +103,14 @@ class RiskKnowledgeGraph:
         rows = db.execute(
             f"""
             SELECT
-                origin_node,
-                destination_cluster,
+                {ORIGIN_COL} AS origin_node,
+                {DEST_COL} AS destination_cluster,
                 COUNT(*) AS order_count,
                 AVG(CASE WHEN delivery_outcome = 'delivered' THEN 1.0 ELSE 0.0 END) AS delivery_rate,
                 AVG(CASE WHEN delivery_outcome = 'rto' THEN 1.0 ELSE 0.0 END) AS rto_rate,
                 SUM(CASE WHEN delivery_outcome = 'rto' THEN 1 ELSE 0 END) AS rto_count
             FROM ({SAMPLE})
-            GROUP BY origin_node, destination_cluster
+            GROUP BY {ORIGIN_COL}, {DEST_COL}
             """
         ).fetchall()
         for r in rows:
@@ -122,12 +131,12 @@ class RiskKnowledgeGraph:
         rows = db.execute(
             f"""
             SELECT
-                customer_ucid,
+                {CUSTOMER_COL} AS customer_ucid,
                 merchant_id,
                 COUNT(*) AS total_orders,
                 SUM(CASE WHEN delivery_outcome = 'rto' THEN 1 ELSE 0 END) AS rto_count
             FROM ({SAMPLE})
-            GROUP BY customer_ucid, merchant_id
+            GROUP BY {CUSTOMER_COL}, merchant_id
             """
         ).fetchall()
         for r in rows:
@@ -149,13 +158,13 @@ class RiskKnowledgeGraph:
             f"""
             SELECT
                 category,
-                destination_cluster,
+                {DEST_COL} AS destination_cluster,
                 COUNT(*) AS order_count,
                 AVG(CASE WHEN delivery_outcome = 'delivered' THEN 1.0 ELSE 0.0 END) AS delivery_rate,
                 AVG(CASE WHEN delivery_outcome = 'rto' THEN 1.0 ELSE 0.0 END) AS rto_rate,
                 SUM(CASE WHEN delivery_outcome = 'rto' THEN 1 ELSE 0 END) AS rto_count
             FROM ({SAMPLE})
-            GROUP BY category, destination_cluster
+            GROUP BY category, {DEST_COL}
             """
         ).fetchall()
         for r in rows:
@@ -176,12 +185,12 @@ class RiskKnowledgeGraph:
             f"""
             SELECT
                 payment_mode,
-                destination_cluster,
+                {DEST_COL} AS destination_cluster,
                 COUNT(*) AS order_count,
                 AVG(CASE WHEN delivery_outcome = 'rto' THEN 1.0 ELSE 0.0 END) AS rto_rate,
                 SUM(CASE WHEN delivery_outcome = 'rto' THEN 1 ELSE 0 END) AS rto_count
             FROM ({SAMPLE})
-            GROUP BY payment_mode, destination_cluster
+            GROUP BY payment_mode, {DEST_COL}
             """
         ).fetchall()
         for r in rows:
@@ -200,7 +209,7 @@ class RiskKnowledgeGraph:
     # Risk path traversal
     # ------------------------------------------------------------------
 
-    def get_risk_path(self, order: dict, db: sqlite3.Connection) -> RiskPath:
+    def get_risk_path(self, order: dict, db) -> RiskPath:
         """Traverse the graph to find the risk explanation for a specific order.
 
         Checks these risk factors in order:
@@ -353,7 +362,7 @@ class RiskKnowledgeGraph:
     # Graph maintenance
     # ------------------------------------------------------------------
 
-    def update_edge_weights(self, db: sqlite3.Connection) -> None:
+    def update_edge_weights(self, db) -> None:
         """Refresh all edge weights from current data. Called periodically."""
         self.graph.clear()
         self.build_graph(db)

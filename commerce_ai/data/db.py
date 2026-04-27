@@ -1,6 +1,135 @@
-"""SQLite connection manager and schema initialization."""
+"""Database connection manager — supports SQLite and Postgres.
 
+Set DATABASE_URL env var to a postgresql:// DSN to use Postgres.
+Otherwise falls back to SQLite (COMMERCE_AI_DB or default path).
+
+Both backends expose the same interface:
+    - conn.execute(sql, params) with %s placeholders
+    - rows are dict-like (row["column_name"])
+    - conn.commit() / conn.close()
+"""
+
+from __future__ import annotations
+
+import os
 import sqlite3
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Backend detection
+# ---------------------------------------------------------------------------
+
+DATABASE_URL: str | None = os.environ.get("DATABASE_URL")
+
+
+def is_postgres() -> bool:
+    return DATABASE_URL is not None and DATABASE_URL.startswith("postgresql")
+
+
+
+# ---------------------------------------------------------------------------
+# Postgres wrapper — makes psycopg2 behave like sqlite3 with Row factory
+# ---------------------------------------------------------------------------
+
+class PgCursorWrapper:
+    """Wraps a psycopg2 cursor so fetchone/fetchall return dict-like rows."""
+
+    def __init__(self, real_cursor):
+        self._cursor = real_cursor
+
+    def fetchall(self):
+        rows = self._cursor.fetchall()
+        if not rows:
+            return []
+        cols = [desc[0] for desc in self._cursor.description]
+        return [dict(zip(cols, row)) for row in rows]
+
+    def fetchone(self):
+        row = self._cursor.fetchone()
+        if row is None:
+            return None
+        cols = [desc[0] for desc in self._cursor.description]
+        return dict(zip(cols, row))
+
+    def __iter__(self):
+        return iter(self.fetchall())
+
+
+class PgConnectionWrapper:
+    """Wraps a psycopg2 connection to match the sqlite3.Connection interface.
+
+    Key differences handled:
+        - Converts ? placeholders to %s for psycopg2
+        - Returns dict-like rows via PgCursorWrapper
+        - executescript() splits on ; and runs each statement
+    """
+
+    def __init__(self, pg_conn):
+        self._conn = pg_conn
+
+    @staticmethod
+    def _convert_placeholders(sql: str) -> str:
+        """Convert SQLite ? placeholders to Postgres %s.
+
+        Careful not to replace ? inside string literals or ?? (which is a
+        Postgres JSON operator).
+        """
+        result = []
+        in_string = False
+        quote_char = None
+        i = 0
+        while i < len(sql):
+            ch = sql[i]
+            if in_string:
+                result.append(ch)
+                if ch == quote_char:
+                    in_string = False
+            elif ch in ("'", '"'):
+                in_string = True
+                quote_char = ch
+                result.append(ch)
+            elif ch == '?' and (i + 1 >= len(sql) or sql[i + 1] != '?'):
+                result.append('%s')
+            else:
+                result.append(ch)
+            i += 1
+        return ''.join(result)
+
+    def execute(self, sql: str, params: tuple | list = ()) -> PgCursorWrapper:
+        cur = self._conn.cursor()
+        converted = self._convert_placeholders(sql)
+        try:
+            cur.execute(converted, params)
+        except Exception:
+            # Roll back the failed transaction so subsequent queries work
+            self._conn.rollback()
+            raise
+        return PgCursorWrapper(cur)
+
+    def executescript(self, sql: str) -> None:
+        cur = self._conn.cursor()
+        cur.execute(sql)
+        self._conn.commit()
+
+    def commit(self) -> None:
+        self._conn.commit()
+
+    def close(self) -> None:
+        self._conn.close()
+
+    @property
+    def raw(self):
+        """Access the underlying psycopg2 connection for advanced use."""
+        return self._conn
+
+
+
+# ---------------------------------------------------------------------------
+# SQLite schema (used only when running in SQLite mode)
+# ---------------------------------------------------------------------------
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS merchants (
@@ -100,17 +229,41 @@ CREATE INDEX IF NOT EXISTS idx_orders_cohort ON orders(merchant_id, category, pr
 """
 
 
-def get_db(db_path: str) -> sqlite3.Connection:
-    """Return a SQLite connection with WAL mode and Row factory."""
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.row_factory = sqlite3.Row
-    return conn
+# ---------------------------------------------------------------------------
+# Public API — get_db / init_db / close_db
+# ---------------------------------------------------------------------------
+
+def get_db(db_path: str = "") -> PgConnectionWrapper | sqlite3.Connection:
+    """Return a database connection.
+
+    If DATABASE_URL is set to a postgresql:// DSN, returns a PgConnectionWrapper.
+    Otherwise returns a sqlite3.Connection using db_path.
+    """
+    if is_postgres():
+        import psycopg2
+        logger.info("Connecting to Postgres: %s", DATABASE_URL[:40] + "...")
+        pg_conn = psycopg2.connect(DATABASE_URL)
+        pg_conn.autocommit = False
+        return PgConnectionWrapper(pg_conn)
+    else:
+        logger.info("Using SQLite: %s", db_path)
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.row_factory = sqlite3.Row
+        return conn
 
 
-def init_db(db_path: str) -> None:
-    """Create all tables and indexes if they don't exist."""
+def init_db(db_path: str = "") -> None:
+    """Initialize the database schema.
+
+    For Postgres: assumes schema was applied by the ETL (postgres_schema.sql).
+    For SQLite: creates tables and indexes.
+    """
+    if is_postgres():
+        logger.info("Postgres mode — schema managed by ETL, skipping init_db")
+        return
+
     conn = get_db(db_path)
     try:
         conn.executescript(_SCHEMA_SQL)
@@ -120,6 +273,6 @@ def init_db(db_path: str) -> None:
         conn.close()
 
 
-def close_db(conn: sqlite3.Connection) -> None:
-    """Close a SQLite connection."""
+def close_db(conn) -> None:
+    """Close a database connection."""
     conn.close()

@@ -22,19 +22,28 @@ if _pkg_root not in sys.path:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: init DB, load data, build graph, create all service instances."""
-    from data.db import get_db, init_db
+    from data.db import get_db, init_db, is_postgres
     from data.load_data import load_all
 
     # --- Database ---
+    # Set DATABASE_URL env var to a postgresql:// DSN to use Postgres.
+    # Otherwise falls back to SQLite via COMMERCE_AI_DB.
     db_path = os.environ.get("COMMERCE_AI_DB", "commerce_ai.db")
     init_db(db_path)
     db = get_db(db_path)
 
-    # Load sample data if the orders table is empty
-    sample_dir = str(Path(__file__).resolve().parent.parent / "data" / "sample")
-    row = db.execute("SELECT COUNT(*) FROM orders").fetchone()
-    if row[0] == 0 and Path(sample_dir).exists():
-        load_all(db, sample_dir)
+    if is_postgres():
+        print("Using Postgres backend (DATABASE_URL)")
+    else:
+        print(f"Using SQLite backend ({db_path})")
+
+    # Load sample data if SQLite and the orders table is empty
+    if not is_postgres():
+        sample_dir = str(Path(__file__).resolve().parent.parent / "data" / "sample")
+        row = db.execute("SELECT COUNT(*) FROM orders").fetchone()
+        count = row[0] if isinstance(row, (list, tuple)) else row.get("count", row.get("COUNT(*)", 0))
+        if count == 0 and Path(sample_dir).exists():
+            load_all(db, sample_dir)
 
     # --- AI layer ---
     from ai.scoring import RealizedCommerceScorer

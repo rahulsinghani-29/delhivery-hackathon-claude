@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+
 
 import config as cfg
 from ai.insights import InsightGenerator
@@ -26,7 +26,7 @@ class OrderActionEngineService:
 
     def __init__(
         self,
-        db: sqlite3.Connection,
+        db,
         risk_reasoner: RiskReasoner,
         nba_policy: NextBestActionPolicy,
         insight_gen: InsightGenerator,

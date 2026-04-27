@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sqlite3
+
 import uuid
 from datetime import datetime
 
@@ -13,7 +13,7 @@ class ImpulseDetector:
     """Detects impulsive buying patterns and upgrades shipping to Express."""
 
     def __init__(
-        self, db: sqlite3.Connection, impulse_categories: list[str] | None = None
+        self, db, impulse_categories: list[str] | None = None
     ) -> None:
         self.db = db
         if impulse_categories is None:

@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: commerce_ai
+      POSTGRES_USER: commerce
+      POSTGRES_PASSWORD: commerce
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commerce -d commerce_ai"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://commerce:commerce@postgres:5432/commerce_ai"
+    volumes:
+      - /Users/delhivery/Delhivery/UCP/hackathon/rto-data-hackathon-result-1-2026-04-27-13-59-08.csv:/data/input.csv:ro
+
+volumes:
+  pgdata:

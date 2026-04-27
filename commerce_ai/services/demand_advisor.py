@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-import sqlite3
+
 
 from ai.insights import InsightGenerator
 from ai.scoring import RealizedCommerceScorer
@@ -15,7 +15,7 @@ class DemandAdvisorService:
 
     def __init__(
         self,
-        db: sqlite3.Connection,
+        db,
         scorer: RealizedCommerceScorer,
         insight_gen: InsightGenerator,
     ) -> None:

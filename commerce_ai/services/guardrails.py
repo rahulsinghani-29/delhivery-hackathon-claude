@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import sqlite3
+
 from datetime import datetime
 
 from data.queries import check_rate_limits, get_merchant_permissions
@@ -12,7 +12,7 @@ from data.queries import check_rate_limits, get_merchant_permissions
 class GuardrailsService:
     """Enforces safety limits on automated interventions."""
 
-    def __init__(self, db: sqlite3.Connection) -> None:
+    def __init__(self, db) -> None:
         self.db = db
 
     def check_rate_limit(self, merchant_id: str) -> bool:
