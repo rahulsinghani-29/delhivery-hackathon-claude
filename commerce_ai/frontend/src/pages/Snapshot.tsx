@@ -120,8 +120,9 @@ const CITY_COORDS: Record<string, [number, number]> = {
 }
 
 function getCityCoords(slug: string): [number, number] | null {
-  if (CITY_COORDS[slug]) return CITY_COORDS[slug]
-  const noUnderscore = slug.replace(/_/g, '')
+  const lower = slug.toLowerCase().replace(/\s+/g, '_')
+  if (CITY_COORDS[lower]) return CITY_COORDS[lower]
+  const noUnderscore = lower.replace(/_/g, '')
   for (const [k, v] of Object.entries(CITY_COORDS)) {
     if (k.replace(/_/g, '') === noUnderscore) return v
   }
@@ -196,7 +197,7 @@ export default function Snapshot() {
   const [selectedId, setSelectedId] = useState<string>('')
   const [data, setData] = useState<SnapshotData | null>(null)
   const [demandMap, setDemandMap] = useState<DemandCity[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [filterCategory, setFilterCategory] = useState<string>('')
@@ -310,7 +311,7 @@ export default function Snapshot() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-6">
-        <MetricCard label="Warehouse Nodes" value={data.warehouse_nodes.length} />
+        <MetricCard label="Destination Cities" value={demandMap.length.toLocaleString()} />
         <MetricCard label="Total Orders" value={totalOrders.toLocaleString()} />
       </div>
 
