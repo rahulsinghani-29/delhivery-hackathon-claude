@@ -1,0 +1,280 @@
+node_id,merchant_id,city,state,pincode,is_active
+WH0001,M001,Mumbai,Maharashtra,400032,true
+WH0002,M001,Delhi,Delhi,110029,true
+WH0003,M001,Chennai,Tamil Nadu,600018,true
+WH0004,M002,Mumbai,Maharashtra,400076,true
+WH0005,M002,Jaipur,Rajasthan,302055,true
+WH0006,M002,Lucknow,Uttar Pradesh,226005,true
+WH0007,M003,Mumbai,Maharashtra,400030,true
+WH0008,M003,Hyderabad,Telangana,500065,true
+WH0009,M004,Delhi,Delhi,110092,true
+WH0010,M004,Jaipur,Rajasthan,302084,true
+WH0011,M004,Hyderabad,Telangana,500090,true
+WH0012,M005,Pune,Maharashtra,411076,true
+WH0013,M005,Hyderabad,Telangana,500036,true
+WH0014,M005,Ahmedabad,Gujarat,380001,true
+WH0015,M006,Pune,Maharashtra,411036,true
+WH0016,M006,Kolkata,West Bengal,700020,true
+WH0017,M007,Kolkata,West Bengal,700012,true
+WH0018,M007,Mumbai,Maharashtra,400049,true
+WH0019,M008,Kolkata,West Bengal,700078,true
+WH0020,M008,Lucknow,Uttar Pradesh,226034,true
+WH0021,M009,Ahmedabad,Gujarat,380016,true
+WH0022,M009,Jaipur,Rajasthan,302049,true
+WH0023,M010,Jaipur,Rajasthan,302081,true
+WH0024,M010,Chennai,Tamil Nadu,600080,true
+WH0025,M011,Lucknow,Uttar Pradesh,226091,true
+WH0026,M011,Hyderabad,Telangana,500009,true
+WH0027,M012,Hyderabad,Telangana,500011,true
+WH0028,M012,Chennai,Tamil Nadu,600030,true
+WH0029,M013,Pune,Maharashtra,411059,true
+WH0030,M013,Chennai,Tamil Nadu,600082,true
+WH0031,M014,Bangalore,Karnataka,560046,true
+WH0032,M014,Kolkata,West Bengal,700027,true
+WH0033,M015,Chennai,Tamil Nadu,600069,true
+WH0034,M015,Mumbai,Maharashtra,400094,true
+WH0035,M015,Bangalore,Karnataka,560032,true
+WH0036,M016,Ahmedabad,Gujarat,380035,true
+WH0037,M016,Pune,Maharashtra,411082,true
+WH0038,M017,Jaipur,Rajasthan,302099,true
+WH0039,M017,Hyderabad,Telangana,500100,true
+WH0040,M017,Kolkata,West Bengal,700008,true
+WH0041,M018,Delhi,Delhi,110052,true
+WH0042,M018,Kolkata,West Bengal,700035,true
+WH0043,M019,Hyderabad,Telangana,500028,true
+WH0044,M019,Kolkata,West Bengal,700084,true
+WH0045,M020,Pune,Maharashtra,411019,true
+WH0046,M020,Ahmedabad,Gujarat,380034,true
+WH0047,M021,Hyderabad,Telangana,500069,true
+WH0048,M021,Jaipur,Rajasthan,302034,true
+WH0049,M022,Lucknow,Uttar Pradesh,226047,true
+WH0050,M022,Pune,Maharashtra,411029,true
+WH0051,M022,Jaipur,Rajasthan,302018,true
+WH0052,M023,Ahmedabad,Gujarat,380015,true
+WH0053,M023,Mumbai,Maharashtra,400020,true
+WH0054,M023,Delhi,Delhi,110081,true
+WH0055,M024,Pune,Maharashtra,411050,true
+WH0056,M024,Mumbai,Maharashtra,400049,true
+WH0057,M025,Ahmedabad,Gujarat,380071,true
+WH0058,M025,Jaipur,Rajasthan,302002,true
+WH0059,M025,Chennai,Tamil Nadu,600088,true
+WH0060,M026,Mumbai,Maharashtra,400099,true
+WH0061,M026,Jaipur,Rajasthan,302083,true
+WH0062,M026,Chennai,Tamil Nadu,600044,true
+WH0063,M027,Chennai,Tamil Nadu,600021,true
+WH0064,M027,Pune,Maharashtra,411059,true
+WH0065,M028,Chennai,Tamil Nadu,600098,true
+WH0066,M028,Jaipur,Rajasthan,302023,true
+WH0067,M029,Mumbai,Maharashtra,400020,true
+WH0068,M029,Chennai,Tamil Nadu,600048,true
+WH0069,M029,Hyderabad,Telangana,500098,true
+WH0070,M030,Jaipur,Rajasthan,302001,true
+WH0071,M030,Lucknow,Uttar Pradesh,226077,true
+WH0072,M031,Ahmedabad,Gujarat,380015,true
+WH0073,M031,Delhi,Delhi,110047,true
+WH0074,M032,Hyderabad,Telangana,500031,true
+WH0075,M032,Delhi,Delhi,110073,true
+WH0076,M033,Mumbai,Maharashtra,400009,true
+WH0077,M033,Ahmedabad,Gujarat,380098,true
+WH0078,M034,Bangalore,Karnataka,560071,true
+WH0079,M034,Lucknow,Uttar Pradesh,226022,true
+WH0080,M034,Ahmedabad,Gujarat,380034,true
+WH0081,M035,Lucknow,Uttar Pradesh,226070,true
+WH0082,M035,Pune,Maharashtra,411097,true
+WH0083,M035,Hyderabad,Telangana,500094,true
+WH0084,M036,Hyderabad,Telangana,500086,true
+WH0085,M036,Chennai,Tamil Nadu,600084,true
+WH0086,M036,Pune,Maharashtra,411048,true
+WH0087,M037,Jaipur,Rajasthan,302016,true
+WH0088,M037,Ahmedabad,Gujarat,380032,true
+WH0089,M038,Mumbai,Maharashtra,400003,true
+WH0090,M038,Kolkata,West Bengal,700076,true
+WH0091,M039,Hyderabad,Telangana,500010,true
+WH0092,M039,Lucknow,Uttar Pradesh,226091,true
+WH0093,M039,Delhi,Delhi,110081,true
+WH0094,M040,Hyderabad,Telangana,500005,true
+WH0095,M040,Mumbai,Maharashtra,400043,true
+WH0096,M041,Jaipur,Rajasthan,302036,true
+WH0097,M041,Hyderabad,Telangana,500086,true
+WH0098,M042,Hyderabad,Telangana,500017,true
+WH0099,M042,Jaipur,Rajasthan,302093,true
+WH0100,M043,Lucknow,Uttar Pradesh,226061,true
+WH0101,M043,Ahmedabad,Gujarat,380053,true
+WH0102,M043,Hyderabad,Telangana,500025,true
+WH0103,M044,Mumbai,Maharashtra,400046,true
+WH0104,M044,Pune,Maharashtra,411055,true
+WH0105,M045,Ahmedabad,Gujarat,380087,true
+WH0106,M045,Delhi,Delhi,110084,true
+WH0107,M046,Mumbai,Maharashtra,400094,true
+WH0108,M046,Delhi,Delhi,110044,true
+WH0109,M046,Pune,Maharashtra,411014,true
+WH0110,M047,Hyderabad,Telangana,500069,true
+WH0111,M047,Lucknow,Uttar Pradesh,226058,true
+WH0112,M048,Pune,Maharashtra,411036,true
+WH0113,M048,Bangalore,Karnataka,560060,true
+WH0114,M049,Mumbai,Maharashtra,400071,true
+WH0115,M049,Ahmedabad,Gujarat,380013,true
+WH0116,M050,Jaipur,Rajasthan,302012,true
+WH0117,M050,Delhi,Delhi,110097,true
+WH0118,M051,Bangalore,Karnataka,560063,true
+WH0119,M051,Pune,Maharashtra,411062,true
+WH0120,M052,Pune,Maharashtra,411022,true
+WH0121,M052,Delhi,Delhi,110049,true
+WH0122,M053,Pune,Maharashtra,411059,true
+WH0123,M053,Chennai,Tamil Nadu,600037,true
+WH0124,M054,Jaipur,Rajasthan,302020,true
+WH0125,M054,Ahmedabad,Gujarat,380025,true
+WH0126,M055,Hyderabad,Telangana,500075,true
+WH0127,M055,Delhi,Delhi,110095,true
+WH0128,M056,Delhi,Delhi,110007,true
+WH0129,M056,Kolkata,West Bengal,700075,true
+WH0130,M056,Lucknow,Uttar Pradesh,226062,true
+WH0131,M057,Jaipur,Rajasthan,302066,true
+WH0132,M057,Bangalore,Karnataka,560011,true
+WH0133,M057,Delhi,Delhi,110024,true
+WH0134,M058,Lucknow,Uttar Pradesh,226087,true
+WH0135,M058,Mumbai,Maharashtra,400031,true
+WH0136,M059,Mumbai,Maharashtra,400075,true
+WH0137,M059,Hyderabad,Telangana,500077,true
+WH0138,M060,Lucknow,Uttar Pradesh,226054,true
+WH0139,M060,Mumbai,Maharashtra,400085,true
+WH0140,M061,Lucknow,Uttar Pradesh,226034,true
+WH0141,M061,Jaipur,Rajasthan,302027,true
+WH0142,M061,Kolkata,West Bengal,700086,true
+WH0143,M062,Kolkata,West Bengal,700051,true
+WH0144,M062,Hyderabad,Telangana,500017,true
+WH0145,M062,Chennai,Tamil Nadu,600086,true
+WH0146,M063,Chennai,Tamil Nadu,600097,true
+WH0147,M063,Ahmedabad,Gujarat,380010,true
+WH0148,M063,Kolkata,West Bengal,700002,true
+WH0149,M064,Lucknow,Uttar Pradesh,226010,true
+WH0150,M064,Mumbai,Maharashtra,400069,true
+WH0151,M065,Jaipur,Rajasthan,302017,true
+WH0152,M065,Chennai,Tamil Nadu,600045,true
+WH0153,M066,Hyderabad,Telangana,500037,true
+WH0154,M066,Kolkata,West Bengal,700021,true
+WH0155,M067,Jaipur,Rajasthan,302079,true
+WH0156,M067,Chennai,Tamil Nadu,600084,true
+WH0157,M068,Delhi,Delhi,110085,true
+WH0158,M068,Jaipur,Rajasthan,302014,true
+WH0159,M068,Chennai,Tamil Nadu,600018,true
+WH0160,M069,Mumbai,Maharashtra,400096,true
+WH0161,M069,Lucknow,Uttar Pradesh,226071,true
+WH0162,M070,Chennai,Tamil Nadu,600078,true
+WH0163,M070,Lucknow,Uttar Pradesh,226027,true
+WH0164,M071,Kolkata,West Bengal,700065,true
+WH0165,M071,Hyderabad,Telangana,500063,true
+WH0166,M071,Chennai,Tamil Nadu,600033,true
+WH0167,M072,Mumbai,Maharashtra,400036,true
+WH0168,M072,Pune,Maharashtra,411006,true
+WH0169,M073,Kolkata,West Bengal,700082,true
+WH0170,M073,Bangalore,Karnataka,560034,true
+WH0171,M074,Ahmedabad,Gujarat,380091,true
+WH0172,M074,Jaipur,Rajasthan,302055,true
+WH0173,M075,Delhi,Delhi,110089,true
+WH0174,M075,Mumbai,Maharashtra,400020,true
+WH0175,M075,Jaipur,Rajasthan,302070,true
+WH0176,M076,Kolkata,West Bengal,700019,true
+WH0177,M076,Jaipur,Rajasthan,302056,true
+WH0178,M077,Delhi,Delhi,110047,true
+WH0179,M077,Chennai,Tamil Nadu,600006,true
+WH0180,M078,Hyderabad,Telangana,500086,true
+WH0181,M078,Lucknow,Uttar Pradesh,226014,true
+WH0182,M079,Jaipur,Rajasthan,302080,true
+WH0183,M079,Pune,Maharashtra,411096,true
+WH0184,M080,Hyderabad,Telangana,500023,true
+WH0185,M080,Bangalore,Karnataka,560053,true
+WH0186,M081,Bangalore,Karnataka,560053,true
+WH0187,M081,Kolkata,West Bengal,700086,true
+WH0188,M082,Hyderabad,Telangana,500090,true
+WH0189,M082,Chennai,Tamil Nadu,600014,true
+WH0190,M082,Bangalore,Karnataka,560049,true
+WH0191,M083,Ahmedabad,Gujarat,380026,true
+WH0192,M083,Hyderabad,Telangana,500059,true
+WH0193,M084,Chennai,Tamil Nadu,600029,true
+WH0194,M084,Hyderabad,Telangana,500004,true
+WH0195,M085,Hyderabad,Telangana,500036,true
+WH0196,M085,Pune,Maharashtra,411009,true
+WH0197,M085,Kolkata,West Bengal,700099,true
+WH0198,M086,Kolkata,West Bengal,700052,true
+WH0199,M086,Jaipur,Rajasthan,302087,true
+WH0200,M087,Kolkata,West Bengal,700034,true
+WH0201,M087,Delhi,Delhi,110023,true
+WH0202,M087,Mumbai,Maharashtra,400075,true
+WH0203,M088,Delhi,Delhi,110077,true
+WH0204,M088,Mumbai,Maharashtra,400056,true
+WH0205,M089,Kolkata,West Bengal,700078,true
+WH0206,M089,Pune,Maharashtra,411066,true
+WH0207,M090,Pune,Maharashtra,411033,true
+WH0208,M090,Hyderabad,Telangana,500006,true
+WH0209,M091,Pune,Maharashtra,411047,true
+WH0210,M091,Delhi,Delhi,110056,true
+WH0211,M091,Hyderabad,Telangana,500009,true
+WH0212,M092,Kolkata,West Bengal,700093,true
+WH0213,M092,Lucknow,Uttar Pradesh,226039,true
+WH0214,M092,Mumbai,Maharashtra,400065,true
+WH0215,M093,Pune,Maharashtra,411052,true
+WH0216,M093,Kolkata,West Bengal,700090,true
+WH0217,M094,Jaipur,Rajasthan,302025,true
+WH0218,M094,Bangalore,Karnataka,560054,true
+WH0219,M095,Pune,Maharashtra,411052,true
+WH0220,M095,Bangalore,Karnataka,560071,true
+WH0221,M095,Chennai,Tamil Nadu,600001,true
+WH0222,M096,Chennai,Tamil Nadu,600056,true
+WH0223,M096,Hyderabad,Telangana,500075,true
+WH0224,M097,Kolkata,West Bengal,700057,true
+WH0225,M097,Ahmedabad,Gujarat,380087,true
+WH0226,M097,Jaipur,Rajasthan,302028,true
+WH0227,M098,Ahmedabad,Gujarat,380037,true
+WH0228,M098,Bangalore,Karnataka,560066,true
+WH0229,M098,Mumbai,Maharashtra,400085,true
+WH0230,M099,Lucknow,Uttar Pradesh,226097,true
+WH0231,M099,Kolkata,West Bengal,700031,true
+WH0232,M099,Mumbai,Maharashtra,400087,true
+WH0233,M100,Hyderabad,Telangana,500019,true
+WH0234,M100,Lucknow,Uttar Pradesh,226004,true
+WH0235,M101,Hyderabad,Telangana,500079,true
+WH0236,M101,Ahmedabad,Gujarat,380099,true
+WH0237,M102,Ahmedabad,Gujarat,380081,true
+WH0238,M102,Pune,Maharashtra,411074,true
+WH0239,M103,Pune,Maharashtra,411052,true
+WH0240,M103,Ahmedabad,Gujarat,380032,true
+WH0241,M104,Delhi,Delhi,110100,true
+WH0242,M104,Mumbai,Maharashtra,400055,true
+WH0243,M105,Bangalore,Karnataka,560060,true
+WH0244,M105,Jaipur,Rajasthan,302007,true
+WH0245,M106,Hyderabad,Telangana,500018,true
+WH0246,M106,Mumbai,Maharashtra,400060,true
+WH0247,M106,Ahmedabad,Gujarat,380086,true
+WH0248,M107,Jaipur,Rajasthan,302079,true
+WH0249,M107,Kolkata,West Bengal,700093,true
+WH0250,M107,Ahmedabad,Gujarat,380065,true
+WH0251,M108,Jaipur,Rajasthan,302021,true
+WH0252,M108,Ahmedabad,Gujarat,380096,true
+WH0253,M109,Ahmedabad,Gujarat,380097,true
+WH0254,M109,Chennai,Tamil Nadu,600032,true
+WH0255,M110,Chennai,Tamil Nadu,600081,true
+WH0256,M110,Jaipur,Rajasthan,302031,true
+WH0257,M110,Ahmedabad,Gujarat,380036,true
+WH0258,M111,Mumbai,Maharashtra,400031,true
+WH0259,M111,Chennai,Tamil Nadu,600035,true
+WH0260,M112,Kolkata,West Bengal,700011,true
+WH0261,M112,Jaipur,Rajasthan,302018,true
+WH0262,M113,Hyderabad,Telangana,500089,true
+WH0263,M113,Pune,Maharashtra,411020,true
+WH0264,M114,Hyderabad,Telangana,500053,true
+WH0265,M114,Mumbai,Maharashtra,400043,true
+WH0266,M114,Pune,Maharashtra,411070,true
+WH0267,M115,Pune,Maharashtra,411027,true
+WH0268,M115,Delhi,Delhi,110054,true
+WH0269,M116,Lucknow,Uttar Pradesh,226098,true
+WH0270,M116,Delhi,Delhi,110074,true
+WH0271,M117,Ahmedabad,Gujarat,380046,true
+WH0272,M117,Delhi,Delhi,110039,true
+WH0273,M118,Pune,Maharashtra,411096,true
+WH0274,M118,Jaipur,Rajasthan,302095,true
+WH0275,M119,Lucknow,Uttar Pradesh,226029,true
+WH0276,M119,Hyderabad,Telangana,500035,true
+WH0277,M119,Ahmedabad,Gujarat,380056,true
+WH0278,M120,Delhi,Delhi,110044,true
+WH0279,M120,Pune,Maharashtra,411086,true

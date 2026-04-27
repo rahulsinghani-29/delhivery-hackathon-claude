@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+node_modules/
+dist/
+.vite/
+.DS_Store
+*.joblib
+.vercel/
